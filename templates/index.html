@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zerodha Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<!-- ── Topbar ─────────────────────────────────────────────────────────── -->
+<div class="topbar">
+  <h1>📈 <span>Zerodha</span> Trading Dashboard</h1>
+  <span id="last-updated" class="muted">Loading…</span>
+</div>
+
+<!-- ── Summary strip ─────────────────────────────────────────────────── -->
+<div class="summary-strip">
+  <div class="stat-item">
+    <span class="stat-label">Total Capital</span>
+    <span class="stat-value blue" id="total-capital">—</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-label">Today's P&amp;L</span>
+    <span class="stat-value" id="today-pnl">—</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-label">Today's Trades</span>
+    <span class="stat-value" id="today-trades">—</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-label">Win / Loss</span>
+    <span class="stat-value" id="today-wr">—</span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-label">All-Time P&amp;L</span>
+    <span class="stat-value" id="total-pnl">—</span>
+  </div>
+</div>
+
+<!-- ── Main content ───────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- Strategy cards -->
+  <section class="section-mb">
+    <h2>Strategies</h2>
+    <div class="cards-grid" id="cards-grid">
+      <!-- JS rendered -->
+      <div class="card"><div class="skeleton" style="height:160px"></div></div>
+      <div class="card"><div class="skeleton" style="height:160px"></div></div>
+      <div class="card"><div class="skeleton" style="height:160px"></div></div>
+      <div class="card"><div class="skeleton" style="height:160px"></div></div>
+    </div>
+  </section>
+
+  <!-- Trades table -->
+  <section class="section-mb">
+    <h2>Trades</h2>
+    <div class="table-toolbar">
+      <input type="date" id="date-picker" />
+      <select id="strat-filter">
+        <option value="">All strategies</option>
+        <option value="SCREENER">LLM Agent / Screener</option>
+        <option value="ORB">ORB</option>
+        <option value="index_options">Index Options</option>
+        <option value="sensex_straddle">SENSEX Straddle</option>
+      </select>
+      <span class="muted" id="trade-count"></span>
+    </div>
+    <div style="overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:8px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Strategy</th>
+            <th>Symbol</th>
+            <th>Side</th>
+            <th>Entry</th>
+            <th>Exit</th>
+            <th>P&amp;L</th>
+            <th>Reason</th>
+            <th>Duration</th>
+          </tr>
+        </thead>
+        <tbody id="trades-tbody">
+          <tr><td colspan="9" class="muted" style="text-align:center;padding:20px">Loading…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Live log -->
+  <section class="section-mb">
+    <h2>Live Log <span class="muted" style="font-size:11px;text-transform:none;letter-spacing:0">(auto-refreshes every 15s)</span></h2>
+    <div class="log-box" id="log-box">Loading…</div>
+  </section>
+
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
