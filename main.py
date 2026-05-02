@@ -10,6 +10,7 @@ Expose over internet:
 """
 
 import json
+import logging
 import secrets
 from collections import defaultdict
 from datetime import datetime, date, timezone, timedelta
@@ -36,6 +37,7 @@ templates = Jinja2Templates(directory="templates")
 
 security = HTTPBasic()
 _IST = timezone(timedelta(hours=5, minutes=30))
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +95,7 @@ def _load_ledger(date_filter: str | None = None, strategy_filter: str | None = N
                 rows.append(rec)
     except Exception:
         pass
-    rows.sort(key=lambda r: r.get("exit_time", ""), reverse=True)
+    rows.sort(key=lambda r: r.get("exit_time") or "", reverse=True)
     return rows[:limit]
 
 
