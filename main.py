@@ -86,7 +86,7 @@ def _load_ledger(date_filter: str | None = None, strategy_filter: str | None = N
                 except json.JSONDecodeError:
                     continue
                 if date_filter:
-                    et = rec.get("exit_time", "")[:10]
+                    et = (rec.get("exit_time") or "")[:10]
                     if et != date_filter:
                         continue
                 if strategy_filter:
