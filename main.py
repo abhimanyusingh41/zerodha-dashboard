@@ -120,7 +120,11 @@ def _today_ist() -> str:
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request, _: str = Depends(verify)):
-    return templates.TemplateResponse("index.html", {"request": request})
+    # Support both old Starlette (<0.46) and new Starlette (>=0.46) TemplateResponse signature
+    try:
+        return templates.TemplateResponse(request, "index.html")
+    except TypeError:
+        return templates.TemplateResponse("index.html", {"request": request})
 
 
 @app.get("/api/summary")
