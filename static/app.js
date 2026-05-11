@@ -54,7 +54,8 @@ async function loadCapital() {
 
     const container = document.getElementById('strat-cards');
     container.innerHTML = cards.map(s => {
-      const pnlAll = s.total_pnl;
+      const pnlAll   = s.total_pnl;
+      const pnlToday = s.today_pnl ?? 0;
       const shortName = CARD_SHORT[s.display] || s.display.toUpperCase().slice(0, 6);
       return `
         <div class="strat-card">
@@ -62,7 +63,7 @@ async function loadCapital() {
           <div class="strat-label">CAPITAL</div>
           <div class="strat-capital">${rupeeAbs(s.current_capital)}</div>
           <div class="strat-label">TODAY P&amp;L</div>
-          <div class="strat-pnl ${colorClass(0)}">+₹0.00</div>
+          <div class="strat-pnl ${colorClass(pnlToday)}">${rupee(pnlToday)}</div>
           <div class="strat-label">ALL-TIME P&amp;L</div>
           <div class="strat-alltime ${colorClass(pnlAll)}">${rupee(pnlAll)}</div>
         </div>`;
@@ -75,6 +76,44 @@ async function loadCapital() {
     const wrEl = document.getElementById('s-wr');
     if (wrEl) { wrEl.textContent = wr + '%'; wrEl.className = 'stat-big ' + (wr >= 50 ? 'green' : 'red'); }
   } catch (e) { console.error('capital', e); }
+}
+
+// ── Open positions ────────────────────────────────────────────────────────────
+
+async function loadPositions() {
+  try {
+    const r = await fetch('/api/positions');
+    if (!r.ok) return;
+    const d = await r.json();
+
+    setText('open-count', d.count);
+    setText('s-open', d.count);
+
+    const box = document.getElementById('positions-box');
+    if (!d.count) {
+      box.innerHTML = '<div class="empty-msg">No open positions</div>';
+      return;
+    }
+    box.innerHTML = d.positions.map(p => {
+      const time = (p.opened_at || '').slice(11, 16);
+      const sl   = p.sl_price ? rupeeAbs(p.sl_price) : '—';
+      const tp   = p.tp_price ? rupeeAbs(p.tp_price) : '—';
+      return `
+        <div class="pos-row">
+          <div class="pos-top">
+            <strong>${p.symbol}</strong>
+            <span class="action-badge">${p.direction}</span>
+            <span class="muted small">${time}</span>
+          </div>
+          <div class="pos-detail">
+            <span>Entry <b>${rupeeAbs(p.entry_price)}</b></span>
+            <span>Qty <b>${p.quantity}</b></span>
+            <span>SL <b class="red">${sl}</b></span>
+            <span>TP <b class="green">${tp}</b></span>
+          </div>
+        </div>`;
+    }).join('<div class="pos-divider"></div>');
+  } catch (e) { console.error('positions', e); }
 }
 
 // ── Trades table ──────────────────────────────────────────────────────────────
@@ -156,6 +195,7 @@ function refreshAll() {
   loadSummary();
   loadCapital();
   loadTrades();
+  loadPositions();
 }
 
 document.addEventListener('DOMContentLoaded', () => {

@@ -18,7 +18,8 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, HTTPException, Query
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.middleware.base import BaseHTTPMiddleware
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -27,11 +28,19 @@ from fastapi.requests import Request
 from config import (
     DASHBOARD_USER, DASHBOARD_PASS,
     CAPITAL_FILE, LEDGER_FILE, RUN_LOG_FILE,
+    PAPER_FNO_FILE, PAPER_PORT_FILE,
     STRATEGIES, STRATEGY_DISPLAY,
 )
 
 app = FastAPI(title="Zerodha Dashboard", docs_url=None, redoc_url=None)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+
+class NoCacheStaticFiles(StaticFiles):
+    async def get_response(self, path: str, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
+
+app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 security = HTTPBasic()
@@ -154,8 +163,15 @@ def api_summary(_: str = Depends(verify)):
 @app.get("/api/capital")
 def api_capital(_: str = Depends(verify)):
     raw = _load_capital()
+
+    # Per-strategy today P&L from closed trades
+    today_rows = _load_ledger(date_filter=_today_ist(), limit=2000)
+    strat_today: dict[str, float] = {}
+    for row in today_rows:
+        k = row.get("strategy", "").lower().replace(" ", "_").replace("-", "_")
+        strat_today[k] = strat_today.get(k, 0) + row.get("pnl_inr", 0)
+
     result = []
-    # Always include all known strategies, even if capital.json is missing/empty
     all_keys = list(STRATEGIES) + [k for k in raw if k not in STRATEGIES]
     for key in all_keys:
         v = raw.get(key, {})
@@ -179,6 +195,7 @@ def api_capital(_: str = Depends(verify)):
             "capital_change": round(current - initial, 2),
             "total_pnl": round(pnl, 2),
             "total_pnl_pct": pnl_pct,
+            "today_pnl": round(strat_today.get(key, 0), 2),
             "total_trades": total,
             "winning_trades": wins,
             "losing_trades": losses,
@@ -188,6 +205,38 @@ def api_capital(_: str = Depends(verify)):
         })
 
     return result
+
+
+@app.get("/api/positions")
+def api_positions(_: str = Depends(verify)):
+    positions = []
+
+    def _read_positions(filepath, label):
+        if not filepath.exists():
+            return
+        try:
+            data = json.loads(filepath.read_text(encoding="utf-8"))
+            for symbol, pos in data.get("positions", {}).items():
+                qty = pos.get("quantity", 0)
+                if not qty:
+                    continue
+                positions.append({
+                    "symbol":      symbol,
+                    "direction":   "BUY" if pos.get("is_long", True) else "SELL",
+                    "entry_price": round(pos.get("average_price", 0), 2),
+                    "quantity":    qty,
+                    "sl_price":    pos.get("sl_price"),
+                    "tp_price":    pos.get("tp_price"),
+                    "opened_at":   pos.get("opened_at", ""),
+                    "strategy":    pos.get("strategy", label),
+                })
+        except Exception as exc:
+            logger.warning("Could not read positions from %s: %s", filepath, exc)
+
+    _read_positions(PAPER_FNO_FILE, "fno")
+    _read_positions(PAPER_PORT_FILE, "equity")
+
+    return {"count": len(positions), "positions": positions}
 
 
 @app.get("/api/trades")
