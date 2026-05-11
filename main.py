@@ -22,7 +22,6 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.requests import Request
 
 from config import (
     DASHBOARD_USER, DASHBOARD_PASS,
@@ -34,14 +33,6 @@ from config import (
 app = FastAPI(title="Zerodha Dashboard", docs_url=None, redoc_url=None)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
-
-@app.middleware("http")
-async def no_cache_static(request: Request, call_next):
-    response = await call_next(request)
-    if request.url.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    return response
-
 security = HTTPBasic()
 _IST = timezone(timedelta(hours=5, minutes=30))
 logger = logging.getLogger(__name__)
@@ -293,7 +284,7 @@ def api_health(_: str = Depends(verify)):
     return {
         "status": "ok",
         "capital_file": CAPITAL_FILE.exists(),
-        "ledger_file": LEDGER_FILE.exists(),
+        "trades_file": TRADES_FILE.exists(),
         "log_file": RUN_LOG_FILE.exists(),
         "time": datetime.now(_IST).strftime("%Y-%m-%d %H:%M:%S IST"),
     }
