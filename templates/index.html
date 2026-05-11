@@ -3,98 +3,115 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Zerodha Dashboard</title>
+  <title>Trading Agent Dashboard</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
 
-<!-- ── Topbar ─────────────────────────────────────────────────────────── -->
+<!-- Header -->
 <div class="topbar">
-  <h1>📈 <span>Zerodha</span> Trading Dashboard</h1>
-  <span id="last-updated" class="muted">Loading…</span>
-</div>
-
-<!-- ── Summary strip ─────────────────────────────────────────────────── -->
-<div class="summary-strip">
-  <div class="stat-item">
-    <span class="stat-label">Total Capital</span>
-    <span class="stat-value blue" id="total-capital">—</span>
+  <div>
+    <div class="title-main">Trading <span>Agent</span></div>
+    <div class="title-sub">Dashboard</div>
   </div>
-  <div class="stat-item">
-    <span class="stat-label">Today's P&amp;L</span>
-    <span class="stat-value" id="today-pnl">—</span>
-  </div>
-  <div class="stat-item">
-    <span class="stat-label">Today's Trades</span>
-    <span class="stat-value" id="today-trades">—</span>
-  </div>
-  <div class="stat-item">
-    <span class="stat-label">Win / Loss</span>
-    <span class="stat-value" id="today-wr">—</span>
-  </div>
-  <div class="stat-item">
-    <span class="stat-label">All-Time P&amp;L</span>
-    <span class="stat-value" id="total-pnl">—</span>
+  <div class="topbar-right">
+    <div class="live-row"><span class="live-dot"></span> Live</div>
+    <div id="last-updated" class="updated-text">Loading…</div>
   </div>
 </div>
 
-<!-- ── Main content ───────────────────────────────────────────────────── -->
-<div class="main">
+<!-- Strategy cards (horizontal scroll) -->
+<div class="strat-scroll">
+  <div class="strat-cards" id="strat-cards">
+    <div class="strat-card skeleton-card"></div>
+    <div class="strat-card skeleton-card"></div>
+    <div class="strat-card skeleton-card"></div>
+    <div class="strat-card skeleton-card"></div>
+  </div>
+</div>
 
-  <!-- Strategy cards -->
-  <section class="section-mb">
-    <h2>Strategies</h2>
-    <div class="cards-grid" id="cards-grid">
-      <!-- JS rendered -->
-      <div class="card"><div class="skeleton" style="height:160px"></div></div>
-      <div class="card"><div class="skeleton" style="height:160px"></div></div>
-      <div class="card"><div class="skeleton" style="height:160px"></div></div>
-      <div class="card"><div class="skeleton" style="height:160px"></div></div>
-    </div>
-  </section>
+<!-- Stats grid -->
+<div class="stats-grid">
+  <div class="stat-cell">
+    <div class="stat-label">TRADES TODAY</div>
+    <div class="stat-big" id="s-trades">—</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">OPEN</div>
+    <div class="stat-big" id="s-open">0</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">WIN RATE</div>
+    <div class="stat-big" id="s-wr">—</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">W / L</div>
+    <div class="stat-big" id="s-wl">—</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">TODAY P&amp;L</div>
+    <div class="stat-big" id="s-today-pnl">—</div>
+  </div>
+  <div class="stat-cell">
+    <div class="stat-label">ALL-TIME P&amp;L</div>
+    <div class="stat-big" id="s-total-pnl">—</div>
+  </div>
+</div>
 
-  <!-- Trades table -->
-  <section class="section-mb">
-    <h2>Trades</h2>
-    <div class="table-toolbar">
+<!-- Open Positions -->
+<div class="section">
+  <div class="section-hdr">
+    OPEN POSITIONS <span class="badge" id="open-count">0</span>
+  </div>
+  <div class="card-box" id="positions-box">
+    <div class="empty-msg">No open positions</div>
+  </div>
+</div>
+
+<!-- Trade History -->
+<div class="section">
+  <div class="section-hdr">TRADE HISTORY</div>
+  <div class="card-box">
+    <div class="filter-row">
       <input type="date" id="date-picker" />
+      <input type="text" id="symbol-filter" placeholder="Symbol…" />
+    </div>
+    <div class="filter-row" style="margin-top:8px">
       <select id="strat-filter">
-        <option value="">All strategies</option>
-        <option value="SCREENER">LLM Agent / Screener</option>
+        <option value="">All Strategies</option>
+        <option value="SCREENER">LLM Agent</option>
         <option value="ORB">ORB</option>
         <option value="index_options">Index Options</option>
         <option value="sensex_straddle">SENSEX Straddle</option>
       </select>
-      <span class="muted" id="trade-count"></span>
+      <span class="muted small" id="trade-count"></span>
     </div>
-    <div style="overflow-x:auto; background:var(--surface); border:1px solid var(--border); border-radius:8px;">
+    <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Time</th>
-            <th>Strategy</th>
-            <th>Symbol</th>
-            <th>Side</th>
-            <th>Entry</th>
-            <th>Exit</th>
+            <th>EXIT TIME</th>
+            <th>SYMBOL</th>
+            <th>ACTION</th>
+            <th>ENTRY</th>
+            <th>EXIT</th>
             <th>P&amp;L</th>
-            <th>Reason</th>
-            <th>Duration</th>
           </tr>
         </thead>
         <tbody id="trades-tbody">
-          <tr><td colspan="9" class="muted" style="text-align:center;padding:20px">Loading…</td></tr>
+          <tr><td colspan="6" class="empty-msg">Loading…</td></tr>
         </tbody>
       </table>
     </div>
-  </section>
+  </div>
+</div>
 
-  <!-- Live log -->
-  <section class="section-mb">
-    <h2>Live Log <span class="muted" style="font-size:11px;text-transform:none;letter-spacing:0">(auto-refreshes every 15s)</span></h2>
-    <div class="log-box" id="log-box">Loading…</div>
-  </section>
-
+<!-- Live Log -->
+<div class="section">
+  <div class="section-hdr">
+    LIVE LOG <span class="muted" style="font-size:10px;font-weight:400;letter-spacing:0">(15s refresh)</span>
+  </div>
+  <div class="log-box" id="log-box">Loading…</div>
 </div>
 
 <script src="/static/app.js"></script>
