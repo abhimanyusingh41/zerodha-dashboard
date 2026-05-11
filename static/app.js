@@ -12,7 +12,7 @@ function colorClass(v) { return v >= 0 ? 'green' : 'red'; }
 async function loadSummary() {
   try {
     const r = await fetch('/api/summary');
-    if (!r.ok) return;
+    if (!r.ok) { setText('last-updated', 'API error ' + r.status); return; }
     const d = await r.json();
 
     setText('total-capital', rupee(d.total_current_capital));
@@ -23,7 +23,7 @@ async function loadSummary() {
     setText('total-pnl', rupee(d.total_pnl));
     setClass('total-pnl', colorClass(d.total_pnl));
     setText('last-updated', 'Updated ' + d.as_of);
-  } catch (e) { console.error('summary', e); }
+  } catch (e) { setText('last-updated', 'Network error'); console.error('summary', e); }
 }
 
 // ── Strategy cards ────────────────────────────────────────────────────────────
@@ -31,10 +31,13 @@ async function loadSummary() {
 async function loadCapital() {
   try {
     const r = await fetch('/api/capital');
-    if (!r.ok) return;
-    const cards = await r.json();
     const grid = document.getElementById('cards-grid');
-    grid.innerHTML = cards.map(renderCard).join('');
+    if (!r.ok) {
+      grid.innerHTML = `<div class="card"><div class="muted" style="padding:20px">Failed to load (${r.status})</div></div>`;
+      return;
+    }
+    const cards = await r.json();
+    grid.innerHTML = cards.length ? cards.map(renderCard).join('') : '<div class="card muted" style="padding:20px">No data yet</div>';
   } catch (e) { console.error('capital', e); }
 }
 
@@ -145,7 +148,7 @@ function renderTrades(trades) {
 async function loadLogs() {
   try {
     const r = await fetch('/api/logs?lines=80');
-    if (!r.ok) return;
+    if (!r.ok) { document.getElementById('log-box').textContent = 'Failed to load logs (' + r.status + ')'; return; }
     const d = await r.json();
     const box = document.getElementById('log-box');
     const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 60;

@@ -27,8 +27,7 @@ from fastapi.requests import Request
 from config import (
     DASHBOARD_USER, DASHBOARD_PASS,
     CAPITAL_FILE, LEDGER_FILE, RUN_LOG_FILE,
-    PAPER_PORT_FILE, PAPER_FNO_FILE,
-    STRATEGY_DISPLAY,
+    STRATEGIES, STRATEGY_DISPLAY,
 )
 
 app = FastAPI(title="Zerodha Dashboard", docs_url=None, redoc_url=None)
@@ -156,9 +155,12 @@ def api_summary(_: str = Depends(verify)):
 def api_capital(_: str = Depends(verify)):
     raw = _load_capital()
     result = []
-    for key, v in raw.items():
-        current = v.get("current_capital", 0)
-        initial = v.get("initial_capital", 50000)
+    # Always include all known strategies, even if capital.json is missing/empty
+    all_keys = list(STRATEGIES) + [k for k in raw if k not in STRATEGIES]
+    for key in all_keys:
+        v = raw.get(key, {})
+        initial = v.get("initial_capital", 50_000)
+        current = v.get("current_capital", initial)
         pnl = v.get("total_pnl", 0)
         total = v.get("total_trades", 0)
         wins = v.get("winning_trades", 0)
@@ -166,7 +168,8 @@ def api_capital(_: str = Depends(verify)):
         win_rate = round(wins / total * 100, 1) if total > 0 else 0.0
         pnl_pct = round(pnl / initial * 100, 2) if initial > 0 else 0.0
 
-        last_trade = v.get("trades", [None])[0] if v.get("trades") else None
+        trades = v.get("trades") or []
+        last_trade = trades[0] if trades else None
 
         result.append({
             "key": key,
@@ -184,7 +187,6 @@ def api_capital(_: str = Depends(verify)):
             "last_trade": last_trade,
         })
 
-    result.sort(key=lambda x: x["key"])
     return result
 
 
