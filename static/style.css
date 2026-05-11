@@ -200,6 +200,14 @@ tbody td { padding: 9px 10px; vertical-align: middle; }
 .muted { color: var(--muted); }
 .small { font-size: 11px; }
 
+/* ── Open positions ──────────────────────── */
+.pos-row { padding: 10px 0; }
+.pos-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.pos-top strong { font-size: 13px; }
+.pos-detail { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+.pos-detail b { color: var(--text); }
+.pos-divider { border-top: 1px solid var(--border); }
+
 /* ── Skeleton ────────────────────────────── */
 .skeleton-card {
   height: 165px;
