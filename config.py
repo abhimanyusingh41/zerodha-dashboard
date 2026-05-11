@@ -16,6 +16,8 @@ RUN_LOG_FILE      = DATA_DIR / "logs" / "run.log"
 PAPER_PORT_FILE   = DATA_DIR / "paper_portfolio.json"
 PAPER_FNO_FILE    = DATA_DIR / "paper_fno_portfolio.json"
 
+STRATEGIES = ["orb", "llm_agent", "index_options", "sensex_straddle"]
+
 STRATEGY_DISPLAY = {
     "orb":             "ORB",
     "llm_agent":       "LLM Agent",
