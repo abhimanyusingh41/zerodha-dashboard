@@ -26,7 +26,7 @@ from fastapi.requests import Request
 
 from config import (
     DASHBOARD_USER, DASHBOARD_PASS,
-    CAPITAL_FILE, LEDGER_FILE, RUN_LOG_FILE,
+    CAPITAL_FILE, TRADES_FILE, RUN_LOG_FILE,
     PAPER_FNO_FILE, PAPER_PORT_FILE,
     STRATEGIES, STRATEGY_DISPLAY,
 )
@@ -78,31 +78,37 @@ def _load_capital() -> dict:
         return {}
 
 
-def _load_ledger(date_filter: str | None = None, strategy_filter: str | None = None, limit: int = 200) -> list[dict]:
-    if not LEDGER_FILE.exists():
+def _load_trades() -> list[dict]:
+    """Load all trades from trades.json. Returns [] on any error."""
+    if not TRADES_FILE.exists():
         return []
-    rows = []
     try:
-        with open(LEDGER_FILE, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    rec = json.loads(line)
-                except json.JSONDecodeError:
-                    continue
-                if date_filter:
-                    et = (rec.get("exit_time") or "")[:10]
-                    if et != date_filter:
-                        continue
-                if strategy_filter:
-                    if rec.get("strategy", "").upper() != strategy_filter.upper():
-                        continue
-                rows.append(rec)
+        data = json.loads(TRADES_FILE.read_text(encoding="utf-8"))
+        return data if isinstance(data, list) else []
     except Exception:
-        pass
-    rows.sort(key=lambda r: r.get("exit_time") or "", reverse=True)
+        return []
+
+
+def _load_ledger(date_filter: str | None = None, strategy_filter: str | None = None, limit: int = 200) -> list[dict]:
+    """Return closed trades from trades.json, optionally filtered."""
+    strat_up = strategy_filter.upper() if strategy_filter else None
+    rows = []
+    for t in _load_trades():
+        if t.get("close_time") is None:
+            continue
+        if date_filter and str(t.get("close_time", ""))[:10] != date_filter:
+            continue
+        if strat_up and t.get("strategy", "").upper() != strat_up:
+            continue
+        # Normalise field names for backward compat with existing frontend
+        rows.append({
+            **t,
+            "exit_time":  t.get("close_time"),
+            "entry_time": t.get("open_time"),
+            "option":     t.get("option_symbol", t.get("symbol", "")),
+            "symbol":     t.get("symbol", ""),
+        })
+    rows.sort(key=lambda r: r.get("close_time") or "", reverse=True)
     return rows[:limit]
 
 
@@ -206,30 +212,57 @@ def api_capital(_: str = Depends(verify)):
 def api_positions(_: str = Depends(verify)):
     positions = []
 
-    def _read_positions(filepath, label):
+    # Primary source: trades.json open positions (survive restarts)
+    for t in _load_trades():
+        if t.get("close_time") is not None:
+            continue
+        positions.append({
+            "symbol":      t.get("option_symbol") or t.get("symbol", ""),
+            "underlying":  t.get("symbol", ""),
+            "direction":   t.get("direction", "BUY"),
+            "entry_price": round(float(t.get("entry_price") or 0), 2),
+            "quantity":    t.get("quantity", 0),
+            "strategy":    t.get("strategy", ""),
+            "type":        t.get("type", "paper"),
+            "opened_at":   t.get("open_time", ""),
+            "sl_price":    None,
+            "tp_price":    None,
+        })
+
+    # Supplement with sl/tp data from paper portfolio files if available
+    _symbol_set = {p["symbol"] for p in positions}
+
+    def _enrich_from_portfolio(filepath):
         if not filepath.exists():
             return
         try:
             data = json.loads(filepath.read_text(encoding="utf-8"))
             for symbol, pos in data.get("positions", {}).items():
-                qty = pos.get("quantity", 0)
-                if not qty:
-                    continue
-                positions.append({
-                    "symbol":      symbol,
-                    "direction":   "BUY" if pos.get("is_long", True) else "SELL",
-                    "entry_price": round(pos.get("average_price", 0), 2),
-                    "quantity":    qty,
-                    "sl_price":    pos.get("sl_price"),
-                    "tp_price":    pos.get("tp_price"),
-                    "opened_at":   pos.get("opened_at", ""),
-                    "strategy":    pos.get("strategy", label),
-                })
+                if symbol in _symbol_set:
+                    # Patch sl/tp into matching position
+                    for p in positions:
+                        if p["symbol"] == symbol:
+                            p["sl_price"] = pos.get("sl_price")
+                            p["tp_price"] = pos.get("tp_price")
+                elif pos.get("quantity", 0):
+                    # Position in portfolio file but not in trades.json (legacy)
+                    positions.append({
+                        "symbol":      symbol,
+                        "underlying":  symbol,
+                        "direction":   "BUY" if pos.get("is_long", True) else "SELL",
+                        "entry_price": round(pos.get("average_price", 0), 2),
+                        "quantity":    pos.get("quantity", 0),
+                        "strategy":    pos.get("strategy", ""),
+                        "type":        "paper",
+                        "opened_at":   pos.get("opened_at", ""),
+                        "sl_price":    pos.get("sl_price"),
+                        "tp_price":    pos.get("tp_price"),
+                    })
         except Exception as exc:
             logger.warning("Could not read positions from %s: %s", filepath, exc)
 
-    _read_positions(PAPER_FNO_FILE, "fno")
-    _read_positions(PAPER_PORT_FILE, "equity")
+    _enrich_from_portfolio(PAPER_FNO_FILE)
+    _enrich_from_portfolio(PAPER_PORT_FILE)
 
     return {"count": len(positions), "positions": positions}
 

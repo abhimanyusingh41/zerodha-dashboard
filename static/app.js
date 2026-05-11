@@ -95,14 +95,18 @@ async function loadPositions() {
       return;
     }
     box.innerHTML = d.positions.map(p => {
-      const time = (p.opened_at || '').slice(11, 16);
-      const sl   = p.sl_price ? rupeeAbs(p.sl_price) : '—';
-      const tp   = p.tp_price ? rupeeAbs(p.tp_price) : '—';
+      const time       = (p.opened_at || '').slice(11, 16);
+      const sl         = p.sl_price ? rupeeAbs(p.sl_price) : '—';
+      const tp         = p.tp_price ? rupeeAbs(p.tp_price) : '—';
+      const stratLabel = (p.strategy || '').toUpperCase().replace('_', ' ');
+      const typeBadge  = (p.type || 'paper').toUpperCase();
       return `
         <div class="pos-row">
           <div class="pos-top">
             <strong>${p.symbol}</strong>
             <span class="action-badge">${p.direction}</span>
+            <span class="action-badge">${typeBadge}</span>
+            <span class="muted small">${stratLabel}</span>
             <span class="muted small">${time}</span>
           </div>
           <div class="pos-detail">

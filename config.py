@@ -11,7 +11,7 @@ _data_dir = os.getenv("DATA_DIR", "../zerodha-trading-agent")
 DATA_DIR = pathlib.Path(_data_dir).resolve()
 
 CAPITAL_FILE      = DATA_DIR / "capital.json"
-LEDGER_FILE       = DATA_DIR / "trade_ledger.jsonl"
+TRADES_FILE       = DATA_DIR / "trades.json"
 RUN_LOG_FILE      = DATA_DIR / "logs" / "run.log"
 PAPER_PORT_FILE   = DATA_DIR / "paper_portfolio.json"
 PAPER_FNO_FILE    = DATA_DIR / "paper_fno_portfolio.json"
